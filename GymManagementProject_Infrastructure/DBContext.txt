@@ -1,0 +1,16 @@
+dotnet ef dbcontext scaffold `
+"Host=aws-1-ap-southeast-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.fglhmkydcnuacvzzljtu;Password=lmp@123" `
+Npgsql.EntityFrameworkCore.PostgreSQL `
+--output-dir Models `
+--context-dir Data `
+--context GymDbContext `
+--schema core `
+--schema iam `
+--schema customers `
+--schema products `
+--schema sales `
+--schema fitness `
+--schema operations `
+--schema comms `
+--schema audit `
+--force

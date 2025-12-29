@@ -1,0 +1,41 @@
+# =====================
+# Build output
+# =====================
+**/bin/
+**/obj/
+
+# =====================
+# Visual Studio
+# =====================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =====================
+# App settings & secrets
+# =====================
+**/appsettings.Development.json
+**/appsettings.Production.json
+.env
+.env.*
+secrets.json
+
+# =====================
+# Publish
+# =====================
+publish/
+**/Properties/PublishProfiles/
+
+# =====================
+# Logs
+# =====================
+*.log
+logs/
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
