@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using GymManagementProject_Api.Middlewares;
 using GymManagementProject_Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -141,33 +142,14 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 //add jwt service
 builder.Services.AddScoped<JwtAuthService>();
 
+//dùng permission từ database để tạo policy
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
 var app = builder.Build();
 
 //middleware xử lý lỗi toàn cục
 app.UseMiddleware<GlobalExceptionMiddleware>();
-
-//dùng permission từ database để tạo policy
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<GymDbContext>();
-
-    var permission = await context.Permissions.AsNoTracking().Select(p => p.Code).ToListAsync();
-
-    builder.Services.AddAuthorization(options =>
-    {
-        foreach (var permissionCode in permission)
-        {
-            if (!string.IsNullOrWhiteSpace(permissionCode))
-            {
-                options.AddPolicy(
-                    permissionCode,
-                    policy => policy.RequireClaim("Permission", permissionCode)
-                );
-            }
-        }
-    });
-}
 
 app.UseCors("AllowAllOrigins");
 app.UseHttpsRedirection();
