@@ -13,6 +13,8 @@ public partial class NotificationLog
 
     public string? Channel { get; set; }
 
+    public string? Status { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public virtual Tenant? Tenant { get; set; }

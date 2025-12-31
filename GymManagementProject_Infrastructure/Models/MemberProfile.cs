@@ -23,6 +23,18 @@ public partial class MemberProfile
 
     public DateTime? EmailVerifiedAt { get; set; }
 
+    public byte[]? AddressFullEnc { get; set; }
+
+    public byte[]? WardEnc { get; set; }
+
+    public byte[]? DistrictEnc { get; set; }
+
+    public byte[]? ProvinceEnc { get; set; }
+
+    public string? DistrictHash { get; set; }
+
+    public string? ProvinceHash { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

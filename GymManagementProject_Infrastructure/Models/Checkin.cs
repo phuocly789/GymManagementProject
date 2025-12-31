@@ -15,6 +15,8 @@ public partial class Checkin
 
     public DateTime? CheckinAt { get; set; }
 
+    public string? Method { get; set; }
+
     public string? DeviceId { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

@@ -13,6 +13,10 @@ public partial class Member
 
     public string MemberCode { get; set; } = null!;
 
+    public string? Status { get; set; }
+
+    public Guid? UserId { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
@@ -40,4 +44,6 @@ public partial class Member
     public virtual ICollection<PtContract> PtContracts { get; set; } = new List<PtContract>();
 
     public virtual Tenant Tenant { get; set; } = null!;
+
+    public virtual User? User { get; set; }
 }

@@ -7,7 +7,7 @@ public partial class EmailVerificationToken
 {
     public Guid Id { get; set; }
 
-    public Guid? UserId { get; set; }
+    public Guid UserId { get; set; }
 
     public Guid? MemberId { get; set; }
 

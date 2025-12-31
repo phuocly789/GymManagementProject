@@ -13,14 +13,16 @@ public class JwtAuthService
     private readonly string? _issuer;
     private readonly string? _audience;
     private readonly GymDbContext _context;
-    private readonly int _munutes;
+    private readonly int _accessTokenExpiryMinutes;
 
     public JwtAuthService(IConfiguration Configuration, GymDbContext db)
     {
         _key = Configuration["JwtConfigs:SecretKey"];
         _issuer = Configuration["JwtConfigs:Issuer"];
         _audience = Configuration["JwtConfigs:Audience"];
-        _munutes = int.Parse(Configuration["JwtConfigs:ExpiryInDays"] ?? "60");
+        _accessTokenExpiryMinutes = int.Parse(
+            Configuration["JwtConfigs:AccessTokenExpiryMinutes"] ?? "60"
+        );
         _context = db;
     }
 
@@ -71,11 +73,8 @@ public class JwtAuthService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(_munutes),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature
-            ),
+            Expires = DateTime.UtcNow.AddMinutes(_accessTokenExpiryMinutes),
+            SigningCredentials = credentials,   
             Issuer = _issuer, // Thêm Issuer vào token
             Audience = _audience,
         };

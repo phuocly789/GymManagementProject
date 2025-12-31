@@ -9,6 +9,8 @@ public partial class Payment
 
     public Guid? InvoiceId { get; set; }
 
+    public string? Method { get; set; }
+
     public decimal Amount { get; set; }
 
     public string? TransactionId { get; set; }

@@ -1,10 +1,17 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using AutoMapper;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using GymManagementProject_Api.Middlewares;
 using GymManagementProject_Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -30,10 +37,38 @@ builder.Services.AddMemoryCache();
 //controllers
 builder
     .Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context
+                .ModelState.Where(x => x.Value?.Errors.Count > 0)
+                .SelectMany(x => x.Value!.Errors)
+                .Select(x => x.ErrorMessage)
+                .ToList();
+
+            var errorResponse = new ErrorResponse
+            {
+                StatusCode = StatusCodes.Status400BadRequest,
+                Error = "Bad Request",
+                Message = string.Join("; ", errors),
+            };
+
+            return new BadRequestObjectResult(errorResponse);
+        };
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+//Fluent Validation
+builder.Services.AddValidatorsFromAssemblyContaining<AuthLoginDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<AuthRegisterDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<AddressDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<RefreshTokenRequestDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<VerifyEmailDtoValidator>();
+builder.Services.AddFluentValidationAutoValidation();
 
 //Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -134,10 +169,22 @@ builder
         };
     });
 
-// builder.Services.AddScoped<ITokenService, TokenService>();
+//email service
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("SmtpConfigs"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Encryption service
+builder.Services.Configure<EncryptionOptions>(builder.Configuration.GetSection("Encryption"));
+builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+
+// AutoMapper
+builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
 
 // Di service
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IVerificationService, VerificationService>();
 
 //add jwt service
 builder.Services.AddScoped<JwtAuthService>();
@@ -146,7 +193,44 @@ builder.Services.AddScoped<JwtAuthService>();
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 
+//middleware chống spam
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    //limit
+    options.AddFixedWindowLimiter(
+        "IpPolicy",
+        opt =>
+        {
+            opt.PermitLimit = 5;
+            opt.Window = TimeSpan.FromMinutes(10);
+            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            opt.QueueLimit = 0;
+        }
+    );
+
+    options.OnRejected = async (context, token) =>
+    {
+        var http = context.HttpContext;
+
+        http.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        http.Response.ContentType = "application/json";
+
+        var error = new ErrorResponse
+        {
+            StatusCode = StatusCodes.Status429TooManyRequests,
+            Error = "Too Many Requests",
+            Message = "Quá nhiều yêu cầu. Vui lòng thử lại sau 10 phút.",
+        };
+
+        await http.Response.WriteAsync(JsonSerializer.Serialize(error), token);
+    };
+});
 var app = builder.Build();
+
+//sử dụng middle chống spam
+app.UseRateLimiter();
 
 //middleware xử lý lỗi toàn cục
 app.UseMiddleware<GlobalExceptionMiddleware>();

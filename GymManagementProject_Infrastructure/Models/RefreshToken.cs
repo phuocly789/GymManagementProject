@@ -27,5 +27,17 @@ public partial class RefreshToken
 
     public int? Version { get; set; }
 
+    public Guid? ReplacedByTokenId { get; set; }
+
+    public bool IsUsed { get; set; }
+
+    public string? RevokedByIp { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
+    public virtual ICollection<RefreshToken> InverseReplacedByToken { get; set; } = new List<RefreshToken>();
+
+    public virtual RefreshToken? ReplacedByToken { get; set; }
+
     public virtual User User { get; set; } = null!;
 }

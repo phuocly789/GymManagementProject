@@ -68,6 +68,7 @@ public class GlobalExceptionMiddleware
                 context.Response.StatusCode = (int)HttpStatusCode.Conflict;
                 error = Build(context, ex, "Conflict");
                 break;
+            
 
             // ⭐ EF CORE UNIQUE / CONSTRAINT
             case DbUpdateException dbEx:

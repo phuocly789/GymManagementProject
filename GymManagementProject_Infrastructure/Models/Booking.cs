@@ -17,6 +17,8 @@ public partial class Booking
 
     public DateTime EndAt { get; set; }
 
+    public string? Status { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
