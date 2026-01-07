@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GymManagementProject_Infrastructure.Models;
 
-public partial class Invoice
+public partial class Invoice : ISoftDelete
 {
     public Guid Id { get; set; }
 

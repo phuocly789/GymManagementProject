@@ -3,25 +3,21 @@ using System.Collections.Generic;
 
 namespace GymManagementProject_Infrastructure.Models;
 
-public partial class MemberProfile : ISoftDelete
+public partial class UserProfile : ISoftDelete
 {
-    public Guid MemberId { get; set; }
+    public Guid UserId { get; set; }
 
     public byte[]? FullNameEnc { get; set; }
 
     public byte[]? PhoneEnc { get; set; }
 
-    public byte[]? EmailEnc { get; set; }
-
     public string? PhoneHash { get; set; }
+
+    public byte[]? IdentityCardNoEnc { get; set; }
 
     public DateOnly? DateOfBirth { get; set; }
 
     public string? Gender { get; set; }
-
-    public bool? EmailVerified { get; set; }
-
-    public DateTime? EmailVerifiedAt { get; set; }
 
     public byte[]? AddressFullEnc { get; set; }
 
@@ -35,6 +31,10 @@ public partial class MemberProfile : ISoftDelete
 
     public string? ProvinceHash { get; set; }
 
+    public string? EmergencyContactName { get; set; }
+
+    public string? EmergencyContactPhone { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
@@ -47,5 +47,5 @@ public partial class MemberProfile : ISoftDelete
 
     public int? Version { get; set; }
 
-    public virtual Member Member { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
 }

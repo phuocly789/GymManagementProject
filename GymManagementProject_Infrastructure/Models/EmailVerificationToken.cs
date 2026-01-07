@@ -31,5 +31,5 @@ public partial class EmailVerificationToken
 
     public virtual Member? Member { get; set; }
 
-    public virtual User? User { get; set; }
+    public virtual User User { get; set; } = null!;
 }

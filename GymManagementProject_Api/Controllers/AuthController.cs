@@ -39,6 +39,20 @@ namespace GymManagementProject_Api.Controllers
             );
         }
 
+        [HttpPost("Logout")]
+        [Authorize]
+        public async Task<ResponseValue<bool>> Logout()
+        {
+            var userIdClaim =
+                User.FindFirst("Id")?.Value
+                ?? throw new UnauthorizedAccessException("Không thể xác định người dùng");
+            var userId = Guid.Parse(userIdClaim);
+
+            await _authService.Logout(userId, GetIpAddress());
+
+            return new ResponseValue<bool>(true, "Đăng xuất thành công.", StatusReponse.Success);
+        }
+
         [HttpPost("Register")]
         public async Task<ResponseValue<string>> Register([FromBody] AuthRegisterDto dto)
         {
@@ -153,9 +167,40 @@ namespace GymManagementProject_Api.Controllers
                 User.FindFirst("Id")?.Value
                 ?? throw new UnauthorizedAccessException("Không thể xác định người dùng");
             var userId = Guid.Parse(userIdClaim);
-            await _authService.ConfirmChangePasswordAsync(userId,dto);
+            await _authService.ConfirmPasswordUpdateAsync(dto, userId);
 
             return new ResponseValue<bool>(true, "Đổi mật khẩu thành công.", StatusReponse.Success);
+        }
+
+        [HttpPost("ResetPassword")]
+        public async Task<ResponseValue<bool>> ResetPassword([FromBody] ResetPasswordAsyncDto dto)
+        {
+            await _authService.ResetPasswordAsync(dto);
+
+            return new ResponseValue<bool>(
+                true,
+                "Gửi yêu cầu thành công, Vui lòng kiểm tra Email.",
+                StatusReponse.Success
+            );
+        }
+
+        [HttpPost("ConfirmResetPassword")]
+        public async Task<ResponseValue<bool>> ConfirmResetPassword(
+            [FromBody] ConfirmChangePasswordDto dto
+        )
+        {
+            if (string.IsNullOrEmpty(dto.Email))
+            {
+                throw new BadRequestException("Email không được để trống.");
+            }
+
+            await _authService.ConfirmPasswordUpdateAsync(dto);
+
+            return new ResponseValue<bool>(
+                true,
+                "Đặt lại mật khẩu thành công.",
+                StatusReponse.Success
+            );
         }
 
         private string GetIpAddress()

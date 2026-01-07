@@ -185,6 +185,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IVerificationService, VerificationService>();
+builder.Services.AddScoped<IProfilePiiReader, ProfilePiiReader>();
 
 //add jwt service
 builder.Services.AddScoped<JwtAuthService>();

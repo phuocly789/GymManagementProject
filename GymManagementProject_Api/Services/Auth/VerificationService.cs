@@ -130,15 +130,6 @@ public class VerificationService : IVerificationService
             }
         }
 
-        templateCode ??= purpose switch
-        {
-            "sigup" => "REGISTRATION_OTP",
-            "reset_password" => "COMMON_OTP_VERIFICATION",
-            "change_password" => "COMMON_OTP_VERIFICATION",
-            "verify_account" => "COMMON_OTP_VERIFICATION",
-            _ => "DEFAULT_OTP",
-        };
-
         await _emailService.SendTemplateAsync(templateCode, tenantId, parameters, normalizedEmail);
 
         return otp;

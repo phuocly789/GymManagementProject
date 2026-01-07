@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GymManagementProject_Infrastructure.Models;
 
-public partial class RefreshToken
+public partial class RefreshToken 
 {
     public Guid Id { get; set; }
 

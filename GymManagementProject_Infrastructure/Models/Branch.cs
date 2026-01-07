@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GymManagementProject_Infrastructure.Models;
 
-public partial class Branch
+public partial class Branch : ISoftDelete
 {
     public Guid Id { get; set; }
 
@@ -39,5 +39,6 @@ public partial class Branch
 
     public virtual Tenant Tenant { get; set; } = null!;
 
-    public virtual ICollection<UserBranchAccess> UserBranchAccesses { get; set; } = new List<UserBranchAccess>();
+    public virtual ICollection<UserBranchAccess> UserBranchAccesses { get; set; } =
+        new List<UserBranchAccess>();
 }
