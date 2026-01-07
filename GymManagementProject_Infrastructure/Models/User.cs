@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GymManagementProject_Infrastructure.Models;
 
-public partial class User
+public partial class User : ISoftDelete
 {
     public Guid Id { get; set; }
 
@@ -33,7 +33,8 @@ public partial class User
 
     public int? Version { get; set; }
 
-    public virtual ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; } = new List<EmailVerificationToken>();
+    public virtual ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; } =
+        new List<EmailVerificationToken>();
 
     public virtual Member? Member { get; set; }
 
@@ -43,7 +44,10 @@ public partial class User
 
     public virtual ICollection<Trainer> Trainers { get; set; } = new List<Trainer>();
 
-    public virtual ICollection<UserBranchAccess> UserBranchAccesses { get; set; } = new List<UserBranchAccess>();
+    public virtual ICollection<UserBranchAccess> UserBranchAccesses { get; set; } =
+        new List<UserBranchAccess>();
+
+    public virtual UserProfile? UserProfile { get; set; }
 
     public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
 }

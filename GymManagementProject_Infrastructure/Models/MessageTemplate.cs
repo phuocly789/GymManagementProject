@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GymManagementProject_Infrastructure.Models;
 
-public partial class MessageTemplate
+public partial class MessageTemplate : ISoftDelete
 {
     public Guid Id { get; set; }
 

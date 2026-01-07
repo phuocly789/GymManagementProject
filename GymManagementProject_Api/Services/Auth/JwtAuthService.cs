@@ -36,6 +36,7 @@ public class JwtAuthService
             new Claim("Id", userLogin.Id.ToString()),
             new Claim("email", userLogin.Email), // Claim mặc định cho username
             new Claim("fullname", userLogin.FullName), // Claim tùy chỉnh cho full name
+            new Claim("tenantId", userLogin.TenantId.ToString()),
             new Claim(JwtRegisteredClaimNames.Sub, userLogin.FullName), // Subject của token
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique ID của token
             new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()), // Thời gian tạo token
@@ -54,9 +55,9 @@ public class JwtAuthService
                     foreach (var permission in role.Permissions)
                     {
                         // Tránh thêm quyền trùng lặp
-                        if (permissions.Add(permission.Name))
+                        if (permissions.Add(permission.Code))
                         {
-                            claims.Add(new Claim("permission", permission.Name));
+                            claims.Add(new Claim("Permission", permission.Code));
                         }
                     }
                 }
@@ -74,7 +75,7 @@ public class JwtAuthService
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(_accessTokenExpiryMinutes),
-            SigningCredentials = credentials,   
+            SigningCredentials = credentials,
             Issuer = _issuer, // Thêm Issuer vào token
             Audience = _audience,
         };

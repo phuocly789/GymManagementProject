@@ -12,5 +12,5 @@ public class UserResponseDto
     public Guid? UpdatedBy { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int? Version { get; set; }
-    public string[] Roles { get; set; } = Array.Empty<string>();
+    public List<string> Roles { get; set; } = new();
 }

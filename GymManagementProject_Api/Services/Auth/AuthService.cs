@@ -9,6 +9,7 @@ public interface IAuthService
 {
     Task<AuthResponseDto> Login(AuthLoginDto login, string ipAddress, string? deviceInfo);
     Task<string> Register(AuthRegisterDto register);
+    Task Logout(Guid userId, string ipAddress);
     Task<bool> VerifyEmailAsync(VerifyEmailDto verifyEmailDto);
     Task<AuthResponseDto> RefreshTokenAsync(
         string refreshToken,
@@ -17,7 +18,8 @@ public interface IAuthService
     );
     Task<string> CreateRefreshTokenAsync(User user, string ipAddress, string? deviceInfo);
     Task ChangePasswordAsync(Guid userId, RequestChangePasswordDto dto);
-    Task ConfirmChangePasswordAsync(Guid userId, ConfirmChangePasswordDto dto);
+    Task ResetPasswordAsync(ResetPasswordAsyncDto dto);
+    Task ConfirmPasswordUpdateAsync(ConfirmChangePasswordDto dto, Guid? userId = null);
 }
 
 public class AuthService : IAuthService
@@ -428,6 +430,19 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task Logout(Guid userId, string ipAddress)
+    {
+        var token =
+            await _refreshTokenRepository.Query().FirstOrDefaultAsync(t => t.UserId == userId)
+            ?? throw new NotFoundException("Không tìm thấy tài khoản");
+
+        token.RevokedAt = DateTime.UtcNow;
+        token.RevokedByIp = ipAddress;
+        token.IsUsed = true;
+
+        await _unitOfWork.SaveChangesAsync();
+    }
+
     public async Task<bool> VerifyEmailAsync(VerifyEmailDto verifyEmailDto)
     {
         // 1. Verify OTP và lấy kết quả
@@ -489,8 +504,6 @@ public class AuthService : IAuthService
                 "JoinDate",
                 user.CreatedAt.HasValue ? user.CreatedAt.Value.ToString("dd/MM/yyyy") : ""
             },
-            { "AppName", "Gym" },
-            { "CurrentYear", DateTime.UtcNow.Year.ToString() },
         };
 
         try
@@ -561,9 +574,6 @@ public class AuthService : IAuthService
             { "FullName", user.FullName ?? "Hội viên" },
             { "MemberCode", member?.MemberCode ?? "N/A" },
             { "ChangeTime", DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss") + " (UTC)" },
-            { "IpAddress", "Từ thiết bị đã đăng nhập" },
-            { "CurrentYear", DateTime.UtcNow.Year.ToString() },
-            { "AppName", "Gym Management" },
         };
 
         await _verificationService.SendOtpAsync(
@@ -577,30 +587,53 @@ public class AuthService : IAuthService
         );
     }
 
-    public async Task ConfirmChangePasswordAsync(Guid userId, ConfirmChangePasswordDto dto)
+    public async Task ConfirmPasswordUpdateAsync(ConfirmChangePasswordDto dto, Guid? userId = null)
     {
         using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
-                throw new NotFoundException("Không tìm thấy người dùng.");
+            User user;
+            VerifyOtpResult otpResult;
+            if (userId.HasValue)
+            {
+                user =
+                    await _userRepository.GetByIdAsync(userId.Value)
+                    ?? throw new NotFoundException("Không tìm thấy người dùng.");
 
-            var result = await _verificationService.VerifyOtpAsync(
-                user.Email,
-                dto.OTP,
-                purpose: "change_password"
-            );
+                otpResult = await _verificationService.VerifyOtpAsync(
+                    email: user.Email,
+                    otp: dto.OTP,
+                    purpose: "change_password"
+                );
 
-            if (result.Purpose != "change_password")
-                throw new BadRequestException("Mã OTP không hợp lệ cho mục đích đổi mật khẩu.");
+                if (otpResult.UserId != userId.Value)
+                    throw new BadRequestException("Mã OTP không hợp lệ cho tài khoản này.");
+            }
+            else
+            {
+                otpResult = await _verificationService.VerifyOtpAsync(
+                    email: dto.Email,
+                    otp: dto.OTP,
+                    purpose: "forgot_password"
+                );
+
+                user =
+                    await _userRepository.GetByIdAsync(otpResult.UserId)
+                    ?? throw new NotFoundException("Không tìm thấy người dùng.");
+            }
+
+            if (user.IsActive != IsActive.Active)
+                throw new BadRequestException("Tài khoản của bạn đã bị vô hiệu hóa.");
 
             user.PasswordHash = PasswordHelper.HashPassword(dto.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = user.Id;
+            user.UpdatedBy = userId ?? user.Id;
 
             //vô hiệu hóa tất cả refresh tork -> logout trên mọi thiết bị
-            await RevokeAllTokensForUserAsync(user.Id, "password_change_by_user");
+            await RevokeAllTokensForUserAsync(
+                user.Id,
+                userId.HasValue ? "password_change_by_user" : "password_change_by_forgot"
+            );
 
             await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -608,6 +641,11 @@ public class AuthService : IAuthService
             var member = await _memberRepository
                 .Query()
                 .FirstOrDefaultAsync(m => m.UserId == user.Id);
+
+            var actionDesc = userId.HasValue
+                ? "ĐỔI MẬT KHẨU THÀNH CÔNG"
+                : "ĐẶT LẠI MẬT KHẨU THÀNH CÔNG";
+
             var parameters = new Dictionary<string, string>
             {
                 { "FullName", user.FullName ?? "Hội viên" },
@@ -615,8 +653,8 @@ public class AuthService : IAuthService
                 { "ChangeTime", DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss") + " (UTC)" },
                 { "CurrentYear", DateTime.UtcNow.Year.ToString() },
                 { "AppName", "Gym Management" },
-                { "OTP", "THÀNH CÔNG" }, // để dùng chung template
-                { "ActionDescription", "đổi mật khẩu thành công" },
+                { "OTP", "THÀNH CÔNG" },
+                { "ActionDescription", actionDesc },
             };
 
             await _emailService.SendTemplateAsync(
@@ -632,4 +670,32 @@ public class AuthService : IAuthService
             throw;
         }
     }
+
+    public async Task ResetPasswordAsync(ResetPasswordAsyncDto dto)
+    {
+        var user =
+            await _userRepository.Query().FirstOrDefaultAsync(u => u.Email == dto.Email)
+            ?? throw new NotFoundException("Email không tồn tại.");
+
+        var member = await _memberRepository.Query().FirstOrDefaultAsync(m => m.UserId == user.Id);
+
+        var parameters = new Dictionary<string, string>
+        {
+            { "FullName", user.FullName ?? "Hội viên" },
+            { "MemberCode", member?.MemberCode ?? "N/A" },
+            { "ChangeTime", DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss") + " (UTC)" },
+        };
+
+        await _verificationService.SendOtpAsync(
+            email: user.Email,
+            tenantId: user.TenantId,
+            purpose: "forgot_password",
+            userId: user.Id,
+            memberId: member?.Id,
+            templateCode: "FORGOT_PASSWORD_OTP",
+            extraParameters: parameters
+        );
+    }
+
+    // public async Task ConfirmResetPasswordAsync(ConfirmResetPasswordDto dto) { }
 }
